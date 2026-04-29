@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+dist/
+build/
+*.spec
+*.egg-info/
+
+# PyInstaller
+*.exe
+*.onefile
+
+# Excel temp files
+~$*.xlsx
+~$*.xls
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.DS_Store
+
+# Logs
+*.log
