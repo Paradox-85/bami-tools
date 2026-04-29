@@ -93,8 +93,9 @@ def process_sheet(ws, mapping=None):
             })
     return records
 
+
 def main():
-    parser = argparse.ArgumentParser(...)
+    parser = argparse.ArgumentParser(description="Unpivot Equipment Characteristics Excel")
     parser.add_argument("input_file", nargs="?", default=None)
     parser.add_argument("--config", "-c", default=None, help="Path to config.yaml")
     parser.add_argument("--output", "-o", default=None)
@@ -111,26 +112,31 @@ def main():
     input_file   = args.input_file   or cfg.get("input_file")
     output_file  = args.output       or cfg.get("output_file")
     mapping_file = args.mapping      or cfg.get("mapping_file")
-    prefix       = args.sheet_prefix or cfg.get("sheet_prefix", "5")
+    prefix       = args.sheet_prefix or cfg.get("sheet_prefix", "5")  # ← вычислено
 
     if not input_file:
         print("ERROR: input_file not specified (CLI arg or config.yaml)")
         sys.exit(1)
 
-    inp  = Path(input_file)
+    inp = Path(input_file)
     out = Path(output_file) if output_file else inp.with_name(inp.stem + "_unpivot.xlsx")
+
+    if not inp.exists():
+        print(f"ERROR: Input file not found: {inp}")
+        sys.exit(1)
 
     mapping = load_mapping(mapping_file)
     print(f"Input : {inp}\nOutput: {out}")
 
     wb = load_workbook(inp, read_only=True, data_only=True)
-    sheets = [s for s in wb.sheetnames if s.startswith(args.sheet_prefix)]
-    print(f"Sheets: {sheets}")
+    sheets = [s for s in wb.sheetnames if s.startswith(prefix)]  # ← prefix, не args.sheet_prefix
+    print(f"Sheets ({len(sheets)}): {sheets}")
 
     all_records = []
     for name in sheets:
         recs = process_sheet(wb[name], mapping)
-        for r in recs: r["Source Sheet"] = name
+        for r in recs:
+            r["Source Sheet"] = name
         all_records.extend(recs)
         print(f"  {name}: {len(recs)} rows")
     wb.close()
@@ -138,7 +144,7 @@ def main():
     out_wb = Workbook()
     ws = out_wb.active
     ws.title = "Unpivot Result"
-    headers = ["Tag Name","Attribute Name","Attribute Value","Attribute UoM","Source Sheet"]
+    headers = ["Tag Name", "Attribute Name", "Attribute Value", "Attribute UoM", "Source Sheet"]
     ws.append(headers)
     for cell in ws[1]:
         cell.font = Font(bold=True, color="FFFFFF")
@@ -147,7 +153,7 @@ def main():
     for rec in all_records:
         ws.append([rec["Tag Name"], rec["Attribute Name"],
                    rec["Attribute Value"], rec["Attribute UoM"], rec["Source Sheet"]])
-    for col, w in zip("ABCDE", [20,40,30,15,30]):
+    for col, w in zip("ABCDE", [20, 40, 30, 15, 30]):
         ws.column_dimensions[col].width = w
     ws.freeze_panes = "A2"
     out_wb.save(out)
