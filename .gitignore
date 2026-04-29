@@ -26,3 +26,6 @@ build/
 
 # Logs
 *.log
+
+# Configs
+equipment-unpivot/config.yaml

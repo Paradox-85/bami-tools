@@ -7,6 +7,7 @@ Usage:
 
 import argparse, sys, os
 from pathlib import Path
+import yaml
 
 try:
     import openpyxl
@@ -16,6 +17,9 @@ except ImportError:
     print("ERROR: pip install openpyxl")
     sys.exit(1)
 
+def load_yaml_config(config_path="config.yaml"):
+    with open(config_path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 def find_header_row(ws, max_scan=5):
     for i, row in enumerate(ws.iter_rows(max_row=max_scan, values_only=True)):
@@ -89,21 +93,34 @@ def process_sheet(ws, mapping=None):
             })
     return records
 
-
 def main():
-    p = argparse.ArgumentParser(description="Unpivot Equipment Characteristics")
-    p.add_argument("input_file")
-    p.add_argument("--mapping", "-m", default=None)
-    p.add_argument("--output", "-o", default=None)
-    p.add_argument("--sheet-prefix", default="5")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser(...)
+    parser.add_argument("input_file", nargs="?", default=None)
+    parser.add_argument("--config", "-c", default=None, help="Path to config.yaml")
+    parser.add_argument("--output", "-o", default=None)
+    parser.add_argument("--mapping", "-m", default=None)
+    parser.add_argument("--sheet-prefix", default="5")
+    args = parser.parse_args()
 
-    inp = Path(args.input_file)
-    if not inp.exists():
-        print(f"ERROR: File not found: {inp}"); sys.exit(1)
+    cfg = {}
+    config_path = args.config or "config.yaml"
+    if os.path.exists(config_path):
+        cfg = load_yaml_config(config_path)
+        print(f"Config loaded: {config_path}")
 
-    out = Path(args.output) if args.output else inp.with_name(inp.stem + "_unpivot.xlsx")
-    mapping = load_mapping(args.mapping)
+    input_file   = args.input_file   or cfg.get("input_file")
+    output_file  = args.output       or cfg.get("output_file")
+    mapping_file = args.mapping      or cfg.get("mapping_file")
+    prefix       = args.sheet_prefix or cfg.get("sheet_prefix", "5")
+
+    if not input_file:
+        print("ERROR: input_file not specified (CLI arg or config.yaml)")
+        sys.exit(1)
+
+    inp  = Path(input_file)
+    out = Path(output_file) if output_file else inp.with_name(inp.stem + "_unpivot.xlsx")
+
+    mapping = load_mapping(mapping_file)
     print(f"Input : {inp}\nOutput: {out}")
 
     wb = load_workbook(inp, read_only=True, data_only=True)
